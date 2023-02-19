@@ -1,6 +1,6 @@
 const http = require('http');
 const url = require('url'); 
-const query = require('querystring')
+const query = require('querystring'); 
 const htmlHandler = require('./htmlResponses.js');
 const jsonHandler = require('./jsonResponses.js');
 
@@ -13,6 +13,7 @@ const urlStruct = {
     '/': htmlHandler.getIndex,
     '/style.css': htmlHandler.getCSS, 
     '/getUsers': jsonHandler.getUsers, 
+    '/addUser': jsonHandler.addUser, 
     '/notReal': jsonHandler.notReal, 
     notFound: jsonHandler.notFound, 
   }, 
@@ -24,6 +25,45 @@ const urlStruct = {
   },
 }; 
 
+//POST Handling 
+const handlePost = (request, response, parsedUrl) => {
+  if(parsedUrl.pathname === '/addUser') {
+    parseBody(request, response, jsonHandler.addUser); 
+  }
+};
+
+const parseBody = (request, response, handler) => {
+  const body = []; 
+
+  request.on('error', (err) => {
+    console.dir(err);
+    response.statusCode = 400;
+    response.end();  
+  });
+
+  request.on('data', (chunk) => {
+    body.push(chunk); 
+  });
+
+  request.on('end', () => {
+    const bodyString = Buffer.concat(body).toString();
+    const bodyParams = query.parse(bodyString); 
+
+    handler(request, response, bodyParams)
+  });
+};
+//GET handling 
+const handleGet = (request, response, parsedUrl) => {
+  if(parsedUrl.pathname === '/style.css') {
+    htmlHandler.getCSS(request, response);
+  } else if (parsedUrl.pathname === '/getUsers'){
+    jsonHandler.getUsers(request, response);
+  }else {
+    htmlHandler.getIndex(request, response); 
+  }
+};
+
+
 //HTTP Request handling 
 const onRequest = (request, response) => {
   const parsedUrl = url.parse(request.url); 
@@ -31,6 +71,13 @@ const onRequest = (request, response) => {
   //Sends 404 for all non GET/HEAD requests 
   if(!urlStruct[request.method]){
     return urlStruct['HEAD'].notFound(request, response); 
+  }
+
+  //Checks if method was POST or not
+  if(request.method === 'POST'){
+    handlePost(request, response, parsedUrl);
+  }else{
+    handleGet(request, response, parsedUrl); 
   }
 
   //Checks for handler 

@@ -37,6 +37,36 @@ const notFoundMeta = (request, response) => {
     respondJSONMeta(request, response, 404); 
 }; 
 
+const addUser = (request, response, body) => {
+    const responseJSON = {
+        message: 'Name and age are both required.',
+    }
+
+    //Checks to make sure both name and age 
+    if(!body.name || !body.age) {
+        responseJSON.id = 'missingParams'; 
+        return respondJSON(request, response, 400, responseJSON); //otherwise sends a 400 code 
+    }
+
+    //Default status code
+    let responseCode = 204; 
+
+    if(!users[body.name]){
+        responseCode = 201;
+        users[body.name] = {};
+    }
+
+    users[body.name].name = body.name;
+    users[body.name].age = body.age; 
+
+    if(responseCode === 201){
+        responseJSON.message = 'Created Successfully';
+        return respondJSON(request, response, responseCode, respondJSON); 
+    }
+
+    return respondJSONMeta(request, response, responseCode); 
+}; 
+
 const getUsers = (request, response) => {
     const responseJSON = {
         users,
@@ -49,35 +79,20 @@ const getUsersMeta = (request, response) => {
     return respondJSONMeta(request, response, 200); 
 }; 
 
-const addUser = (request, response) => {
-    const newUser = {
-        name: 'Bob',
-        age: 1, 
-    }; 
-
-    //Adds new user to Users list 
-    users.push(newUser); 
-
-    return respondJSON(request, response, 201, newUser); 
-}; 
-
 const updateUser = (request, response) => {
-
-    const editedUser = users; 
-
-    users[editedUser.age] = editedUser; 
-    //
-    return respondJSON(request, response, 204, editedUser); 
-
-};
-
-const missingParams = (request, response) => {
-
-};
-
-const addUserMeta = (request, response) => {
-    return respondJSONMeta(request, response, 201); 
-}; 
+    //change to make to user
+    //This is just a dummy object for example
+    const newUser = {
+      createdAt: Date.now(),
+    };
+  
+    // modifying our dummy object
+    // just indexing by time for now
+    users[newUser.createdAt] = newUser;
+  
+    //return a 201 created status
+    return respondJSON(request, response, 201, newUser);
+  };
 
 const notReal = (request, response) => {
     const responseJSON = {
@@ -96,10 +111,9 @@ const notRealMeta = (request, response) => {
 module.exports = {
     notFound, 
     notFoundMeta, 
+    addUser,
     getUsers, 
     getUsersMeta,
-    addUser, 
-    addUserMeta, 
     updateUser, 
     notReal, 
     notRealMeta
