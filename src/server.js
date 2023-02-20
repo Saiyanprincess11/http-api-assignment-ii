@@ -1,95 +1,74 @@
-const http = require('http');
+const http = require('http'); //pull in http module
 const url = require('url'); 
-const query = require('querystring'); 
+const query = require('querystring');
 const htmlHandler = require('./htmlResponses.js');
 const jsonHandler = require('./jsonResponses.js');
 
-const port = process.env.PORT || process.env.NODE_PORT || 3000; 
+const port = process.env.PORT || process.env.NODE_PORT || 3000;
 
-
-//URL Handling 
-const urlStruct = {
-  'GET': {
-    '/': htmlHandler.getIndex,
-    '/style.css': htmlHandler.getCSS, 
-    '/getUsers': jsonHandler.getUsers, 
-    '/addUser': jsonHandler.addUser, 
-    '/notReal': jsonHandler.notReal, 
-    notFound: jsonHandler.notFound, 
-  }, 
-
-  'HEAD': {
-    '/getUsers': jsonHandler.getUsersMeta, 
-    '/notReal': jsonHandler.notRealMeta, 
-    notFound: jsonHandler.notFoundMeta, 
-  },
-}; 
-
-//POST Handling 
+//handle POST requests
 const handlePost = (request, response, parsedUrl) => {
+  
   if(parsedUrl.pathname === '/addUser') {
-    parseBody(request, response, jsonHandler.addUser); 
+    parseBody(request, response, jsonHandler.addUser);
   }
 };
 
+//Reassembles the body and then handles the request.
 const parseBody = (request, response, handler) => {
-  const body = []; 
 
+  const body = [];
+
+  //Event Handlers 
+  //Error Handling
   request.on('error', (err) => {
     console.dir(err);
     response.statusCode = 400;
-    response.end();  
+    response.end();
   });
 
+  //Data Handling
   request.on('data', (chunk) => {
-    body.push(chunk); 
+    body.push(chunk);
   });
 
+  //End Handling 
   request.on('end', () => {
     const bodyString = Buffer.concat(body).toString();
-    const bodyParams = query.parse(bodyString); 
-
-    handler(request, response, bodyParams)
+    const bodyParams = query.parse(bodyString);
+    handler(request, response, bodyParams);
   });
 };
-//GET handling 
+
+//GET Request Handling 
 const handleGet = (request, response, parsedUrl) => {
-  if(parsedUrl.pathname === '/style.css') {
+
+  //Based on URL, picks handler 
+  if (parsedUrl.pathname === '/style.css') {
     htmlHandler.getCSS(request, response);
-  } else if (parsedUrl.pathname === '/getUsers'){
+  } else if (parsedUrl.pathname === '/getUsers') {
     jsonHandler.getUsers(request, response);
-  }else {
-    htmlHandler.getIndex(request, response); 
+  } else if(parsedUrl.pathname === '/notReal') {
+    jsonHandler.notReal(request, response); 
+  } else {
+    htmlHandler.getIndex(request, response);
+  }
+};
+
+const onRequest = (request, response) => {
+  //parse url into individual parts
+  const parsedUrl = url.parse(request.url);
+
+  //check if method was POST 
+  if (request.method === 'POST') {
+    handlePost(request, response, parsedUrl);
+  } else {
+    handleGet(request, response, parsedUrl);
   }
 };
 
 
-//HTTP Request handling 
-const onRequest = (request, response) => {
-  const parsedUrl = url.parse(request.url); 
-
-  //Sends 404 for all non GET/HEAD requests 
-  if(!urlStruct[request.method]){
-    return urlStruct['HEAD'].notFound(request, response); 
-  }
-
-  //Checks if method was POST or not
-  if(request.method === 'POST'){
-    handlePost(request, response, parsedUrl);
-  }else{
-    handleGet(request, response, parsedUrl); 
-  }
-
-  //Checks for handler 
-  if(urlStruct[request.method][parsedUrl.pathname]){
-    urlStruct[request.method][parsedUrl.pathname](request, response); 
-  } else {//otherwise sends 404 Not Found code 
-    urlStruct[request.method].notFound(request, response); 
-  }
-
-}; 
-
-//Starts server 
+//Starts server
 http.createServer(onRequest).listen(port, () => {
-    console.log(`Listening on 127.0.0.1:${port}`); 
-}); 
+  console.log(`Listening on 127.0.0.1: ${port}`);
+});
